@@ -19,16 +19,16 @@ def GetFiles(filedir):
     return np.array(fname), np.array(id), np.array(pathlist)
 
 
-"""
-fname, id, pathlist = GetFiles("/Users/olivia/Documents/PhD/MISTIE/scans_adrian")
-fname_roi, id_roi, pathlist_roi = GetFiles("/Users/olivia/Documents/PhD/MISTIE/SachaROI")
+
+fname, id, pathlist = GetFiles("/Users/olivia/Documents/scans_del")
+fname_roi, id_roi, pathlist_roi = GetFiles("/Users/olivia/Documents/PhD/MISTIE/H")
 #print(fname_roi)
 y = [z[:4] for z in fname]
 tick, tickf = 0,0
 badFile = []
 goodFile = []
 roi = [z[0:4] for z in fname_roi]
-        
+print("length fname:", len(fname_roi))
 for i in range(len(roi)):
     if roi[i] == "PRIM" or roi[i] == ".DS_":
         roi[i]=0
@@ -75,7 +75,7 @@ for name in goodFile:
     directory = str(name[0:4])
         
     # Parent Directories 
-    parent_dir = "/Users/olivia/Documents/PhD/MISTIE/sachaexp"
+    parent_dir = "/Users/olivia/Documents/PhD/MISTIE/hexpdel"
         
     # Path 
     path = os.path.join(parent_dir, directory) 
@@ -85,21 +85,21 @@ for name in goodFile:
     os.makedirs(path) 
     print("Directory '% s' created" % directory)
 
+
 for file in goodFile:
    
-    newPath = shutil.copy("/Users/olivia/Documents/PhD/MISTIE/SachaROI/" + str(file[0:4]) + "_SC.rois_series", '/Users/olivia/Documents/PhD/MISTIE/sachaexp/' + str(file[0:4]))
+    newPath = shutil.copy("/Users/olivia/Documents/PhD/MISTIE/H/" + str(file) + ".rois_series", '/Users/olivia/Documents/PhD/MISTIE/hexpdel/' + str(file[0:4]))
 
 
-"""
 
-"""
+
+
 
 # copy subdirectory example
 for file in goodFile:
  
-        fromDirectory = "/Users/olivia/Documents/PhD/MISTIE/scans_adrian/" +str(file) 
-        toDirectory = "/Users/olivia/Documents/PhD/MISTIE/sachaexp/" + str(file[0:4]) + "/scan"
+        fromDirectory = "/Users/olivia/Documents/scans_del/" +str(file) 
+        toDirectory = "/Users/olivia/Documents/PhD/MISTIE/hexpdel/" + str(file[0:4]) + "/scan"
 
         shutil.copytree(fromDirectory, toDirectory)
 
-"""

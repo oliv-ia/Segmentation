@@ -7,6 +7,8 @@ import numpy as np
 import shutil
 import SimpleITK as sitk
 import scipy
+import dicom2nifti
+from DicomRTTool import DicomReaderWriter
 from scipy.ndimage.measurements import center_of_mass
 def GetFiles(filedir):
     entries = Path(filedir)
@@ -20,6 +22,7 @@ def GetFiles(filedir):
         fname.append(entry.name)
         id.append(idTick)
         pathlist.append(str(filedir) + "/" + str(entry.name))
+        
 
     return np.array(fname), np.array(id), np.array(pathlist)
 def ReadMask(filedir):
@@ -27,6 +30,32 @@ def ReadMask(filedir):
     seg_arr = sitk.GetArrayFromImage(seg)
     seg_arr = seg_arr.astype(np.int64)
     return seg_arr
+
+def ReadCT(dir):
+    
+    fliplist = []
+    
+    nifti_dir = os.path.join(dir, "nifti.nii.gz")
+    
+    reader = DicomReaderWriter() 
+    reader.walk_through_folders(dir)
+    reader.get_images()
+    sitk.WriteImage(reader.dicom_handle, nifti_dir)
+    CT = sitk.ReadImage(nifti_dir,imageIO= "NiftiImageIO" )
+    print(CT.GetDirection(), CT.GetDirection()[-1])
+    if CT.GetDirection()[-1] == 0:
+        flip = True
+        seg_arr = sitk.GetArrayFromImage(CT)
+        seg_arr = seg_arr.astype(np.int64)
+        return seg_arr, flip
+    else:
+        flip = False
+        seg_arr = sitk.GetArrayFromImage(CT)
+        seg_arr = seg_arr.astype(np.int64)
+        return seg_arr, flip
+
+
+
 def GetSlices(seg_arr):
     values= []
     for i in range(0,len(seg_arr, axis = 0)):
@@ -36,7 +65,7 @@ def GetSlices(seg_arr):
     return values
 
 def SaveData(inputs, ids):
-    path = '/Users/olivia/Documents/PhD/MISTIE/mask_data/paul_masks.npz'
+    path = '/Users/olivia/Documents/PhD/MISTIE/mask_data/2110_experiment.npz'
     ids = np.array(ids)
     #print("final shape: ", inputs.shape,  ids.shape)
     np.savez(path, masks = inputs,  ids = ids) 
@@ -45,12 +74,13 @@ def SaveData(inputs, ids):
 def Cropping(input):
     coords = center_of_mass(input)
     
-
+"""
 adrian_path = "/Users/olivia/Documents/PhD/MISTIE/adrianexp"
 scans_path = "/Users/olivia/Documents/PhD/MISTIE/adrianexp"
 sacha_path = "/Users/olivia/Documents/PhD/MISTIE/sachaexp"
 paul_path = "/Users/olivia/Documents/PhD/MISTIE/paulexp"
-fname, ids, pathlist = GetFiles(paul_path)
+h_path = "/Users/olivia/Documents/PhD/MISTIE/hexp"
+fname, ids, pathlist = GetFiles(h_path)
 
 #print(fname, ids.shape)
 #print(pathlist)
@@ -73,7 +103,58 @@ print(len(mask_array[0]), len(mask_array[1]), len(mask_array[2]))
 
 print(fname)
 masks = SaveData(mask_array, fname)
+"""
 
+
+
+#CT reading
+
+path = "/Users/olivia/Documents/PhD/MISTIE/2110 experiment/2110/DICOMDIR"
+
+fname, ids, pathlist = GetFiles(path)
+
+ct_pathlist = []
+for dir in pathlist: 
+
+    print( "dir: ", dir) 
+    print( "fname: ", fname)
+     
+    #print(scan_dir)
+    directory = "Diagnostic CT"
+    scan_entry = os.path.join(dir , directory)
+
+    """
+    if not os.listdir(scan_entry)[0].startswith('.') :
+        scan_dir = os.listdir(scan_entry)[0] + "/"
+        scan_entry_2 = os.path.join(scan_entry , scan_dir)
+        ct_pathlist.append(scan_entry_2)
+
+    else: 
+        scan_dir = os.listdir(scan_entry)[1] + "/"
+        scan_entry_2 = os.path.join(scan_entry , scan_dir)
+        ct_pathlist.append(scan_entry_2)
+    """
+    
+    ct_pathlist.append(scan_entry)
+
+ct_array = []
+flip_array = []
+id_array = []
+for dir in ct_pathlist:
+    
+    ct, flip = ReadCT(dir)
+    ct_array.append(ct)
+    flip_array.append(flip)
+    id = dir[48:52]
+    id_array.append(id)
+    print ("ct shape: ", ct.shape)
+    print(" Read for ", dir)
+   
+print(flip_array, id_array)
+for i in range(0, len(flip_array)):
+    if flip_array[i] == True:
+        print(id_array[i])
+CTS = SaveData(ct_array, id_array)
 """
 
 ct_pathlist = []
