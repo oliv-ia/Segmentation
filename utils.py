@@ -336,7 +336,33 @@ def IdSkip(ids_a,ids_b,ids_c, masks_a, masks_b, masks_c):
             id_c.pop(i)
 
     return np.asarray(mask_a), np.asarray(id_a), np.asarray(mask_b), np.asarray(id_b), np.asarray(mask_c), np.asarray(id_c)
-
+def IdSkip2(ids_a,ids_b, masks_a, masks_b):
+    mask_a = masks_a.tolist()
+    mask_b = masks_b.tolist()
+    
+    id_a = ids_a.tolist()
+    id_b = ids_b.tolist()
+    print("before: ", len(id_a), len(id_b), len(set(id_a)), len(set(id_b)))
+    ids_skip =[]
+    for id in ids_b:
+        if id not in ids_a:
+            ids_skip.append(id)
+    for idb in ids_a:
+        if idb not in ids_b:
+            ids_skip.append(idb)
+    #ids_skip_set = set(id_a)- set(id_b)
+    print("idskip: ", ids_skip)
+    for idsk in ids_skip:
+        if idsk in ids_a:
+            i = id_a.index(idsk)
+            mask_a.pop(i)
+            id_a.pop(i)
+        elif idsk in ids_b:
+            i = id_b.index(idsk)
+            mask_b.pop(i)
+            id_b.pop(i)
+    print("after: ", len(id_a), len(id_b))
+    return np.asarray(mask_a), np.asarray(id_a), np.asarray(mask_b), np.asarray(id_b)
 def IdSkip4(ids_a,ids_b,ids_c, ids_d, masks_a, masks_b, masks_c, masks_d):
     mask_a = masks_a.tolist()
     mask_b = masks_b.tolist()
@@ -415,8 +441,12 @@ def DiceCaster(staple_array, staple_ids, staple_slices, masks_a, ids_a):
         dice_array.append(dices_array)   
     return dice_array
 
-def DiceCaster2(masks_b, ids_b, slices_b, slices_b_ids, masks_a, ids_a, slices_a, slices_a_ids):
     
+def DiceCaster2(masks_b_, ids_b_, slices_b, slices_b_ids, masks_a_, ids_a_, slices_a, slices_a_ids):
+    print("befored: ",len(ids_a_), len(ids_b_))
+    masks_a, ids_a, masks_b, ids_b = IdSkip2(ids_a_, ids_b_, masks_a_, masks_b_)
+    print(ids_a, ids_b)
+    print("afterd: ",len(ids_a) ,len(ids_b))
     id_a = ids_a.tolist()
     dice_array =[]
     for i in range(0, len(masks_b)):
@@ -424,31 +454,34 @@ def DiceCaster2(masks_b, ids_b, slices_b, slices_b_ids, masks_a, ids_a, slices_a
         patient_id = ids_b[i]
         print(patient_id)
         place_holder = id_a.index(patient_id)
-        slices_place_a = slices_a_ids.tolist().index(patient_id)
-        slices_place_b = slices_b_ids.tolist().index(patient_id)
+        if patient_id in slices_a_ids and patient_id in slices_b_ids:
+            slices_place_a = slices_a_ids.tolist().index(patient_id)
+            slices_place_b = slices_b_ids.tolist().index(patient_id)
 
-        print(slices_b[i])
-        for j in slices_b[slices_place_b]:
-            
-            
-            print(" j: ", j, slices_b[slices_place_b], slices_a[slices_place_a])
-            if j in slices_a[slices_place_a]:
-                print("true")
+            print(slices_b[i])
+            for j in slices_b[slices_place_b]:
                 
-                #for j in range(0, len(slices_b[i])):
-                #for j in range(0, len(staple_array[i])):
-                #slices_arr = slices_b[i]
-                #ind = slices_arr[j]
-                #if ind in slices_a[i]:
-                #print("place holder: ", place_holder, "ind: ", ind, "i: ", i, "j: ", j )
+                
+                print(" j: ", j, slices_b[slices_place_b], slices_a[slices_place_a])
+                if j in slices_a[slices_place_a]:
+                    print("true")
+                    
+    
+            
 
-                dice_coeff = compute_dice_coefficient(masks_a[place_holder][j,:,:], masks_b[i][j,:,:])
-                dice_coeff = dice_coeff * 100
-                dices_array.append(dice_coeff)
-            else:
-                print("false")
-        dice_array.append(dices_array)   
-    return dice_array
+                    
+        
+                    masks_a[i][j][masks_a[i][j] != 0] =1
+                    masks_b[i][j][masks_b[i][j] !=0 ] =1
+
+                    dice_coeff = compute_dice_coefficient(masks_a[i][j], masks_b[i][j])
+                    print("dice: ", dice_coeff)
+                    dice_coeff = dice_coeff * 100
+                    dices_array.append(dice_coeff)
+                else:
+                    print("false")
+            dice_array.append(dices_array)   
+    return dice_array, ids_a
 
 def DiceCaster3(masks_b, ids_b, slices_b, masks_a, ids_a, slices_a):
     
@@ -742,4 +775,18 @@ def Unpack2DNpz(path):
     slices = data['slices']
     return cts, masks, ids, slices
 
-
+def GetInvolved(ids_a, ids_b,masks_a, masks_b ):
+    # according to adrian
+    a_info_path = "/Users/oliviamurray/Documents/PhD/MISTIE/PRIME_ICH_Data.xlsx"
+    mask_sk_a, ids_sk_a, mask_sk_b, ids_sk_b = IdSkip2(ids_a, ids_b, masks_a, masks_b)
+    a_involve =[]
+    data_frame = pd.read_excel(a_info_path, sheet_name= "APJ", usecols = ['PRIME_ID', 'PLIC involvement '])
+    ID = data_frame['PRIME_ID'].tolist()
+    print("id len: ", len(ID))
+    involve = data_frame['PLIC involvement '].tolist()
+    for i in range(0, len(ID)):
+        
+        if ID[i][0:4] in ids_sk_a:
+            print(ID[i][0:4])
+            a_involve.append(involve[i])
+    return a_involve
