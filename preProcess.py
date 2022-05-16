@@ -1,10 +1,12 @@
 import matplotlib
-from utils import Unpack2DNpz
+from utils import Unpack2DNpz, UnpackNpz, UnpackSlices
 import nibabel as nib
 import numpy as np
 from nnunet.utilities.file_conversions import convert_2d_image_to_nifti
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
+from utils import Save2DData
+
 # file to convert 2D arrays into pseudo-3D nifti images for use with nnunet 
 # must be 2D slices and not 3D arrays
 def convert_2d_image_to_nifti(img, output_filename_truncated: str, spacing=(999, 1, 1),
@@ -58,15 +60,38 @@ def convert_2d_image_to_nifti(img, output_filename_truncated: str, spacing=(999,
             sitk.WriteImage(itk_img, output_filename_truncated + ".nii.gz")
 
 def main():
-
-    path = '/Users/olivia/Documents/PhD/MISTIE/mask_data/adrian_matched_2d_training.npz'
+    path_3d = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CTscans.npz'
+    slices_path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CR_slices_adrian.npz'
+    mask_path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/PLIC_mask_adrian.npz'
+    cts3d, ids3d = UnpackNpz(path_3d)
+    slices3d, slices_ids3d = UnpackSlices(slices_path)
+    masks3d, mask_ids3d = UnpackNpz(mask_path)
+    path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/h_matched_2d_training.npz'
     cts, masks, ids, slices = Unpack2DNpz(path)
-    #for i in range(0, len(cts)):
-        #title = '/Users/olivia/Documents/PhD/MISTIE/training_data/maskmatchedNifti/' + str(ids[i])
-        #convert_2d_image_to_nifti(masks[i], title, is_seg=True)
+    for i in range(0, len(cts)):
+        title = '/Users/oliviamurray/Documents/PhD/MISTIE/training_data/CTmatchedHNifti/' + str(ids[i]) + "h"
+        convert_2d_image_to_nifti(masks[i], title, is_seg=True)
 
-    test_load = nib.load('/Users/olivia/Documents/PhD/MISTIE/training_data/CTmatchedNifti/2027_0000.nii.gz').get_fdata()
-    test_load_m = nib.load('/Users/olivia/Documents/PhD/MISTIE/training_data/maskmatchedNifti/2027.nii.gz').get_fdata()
+    '''    
+    test_ids, test_cts, test_masks, test_slices, test_slice_ids = [],[],[],[],[]
+    for id in ids3d:
+        if id not in ids:
+            if id in mask_ids3d:
+                test_ids.append(id)
+                ct_place = ids3d.tolist().index(id)
+                mask_place = mask_ids3d.tolist().index(id)
+                slice_place = slices_ids3d.tolist().index(id)
+                test_cts.append(cts3d[ct_place])
+                test_masks.append(masks3d[mask_place])
+                test_slices.append(slices3d[slice_place])
+    print(len(test_ids), len(test_cts), len(test_slices), len(test_masks))
+    print(len(cts3d), len(test_cts), len(cts))
+    save_path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/adrian_anti_matched_2d_training.npz'
+    #d = Save2DData(test_cts, test_ids,test_masks, test_ids, test_slices, test_ids, save_path )
+    '''
+    """
+    test_load = nib.load('/Users/oliviamurray/Documents/PhD/MISTIE/training_data/CTmatchedNifti/2027_0000.nii.gz').get_fdata()
+    test_load_m = nib.load('/Users/oliviamurray/Documents/PhD/MISTIE/training_data/maskmatchedNifti/2027.nii.gz').get_fdata()
     print(test_load.shape)
     print(test_load_m.shape)
     test = test_load[:,:,0]
@@ -74,6 +99,6 @@ def main():
     plt.imshow(test, cmap= 'gray')
     plt.imshow(test_m, alpha = 0.5)
     plt.show()
-
+    """
 if __name__ == '__main__':
  main()

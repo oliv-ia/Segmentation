@@ -742,30 +742,64 @@ def Save2DData(cts, ct_ids, masks, mask_ids, slices_arr, slices_ids, path):
     ct_2d_arr , mask_2d_arr, id_2d_arr, slice_2d_arr = [], [] ,[], []
     for i in range(len(ct_ids)):
         patient = ct_ids[i]
-        place_slice = slices_ids.tolist().index(patient)
-        place_mask = mask_ids.tolist().index(patient)
-        slices = slices_arr[place_slice]
-        masks[place_mask] = masks[place_mask].astype(float)
-        for slic in slices:
-            window = 80
-            level = 40
-    
-            vmin = (level/2) - window
-            vmax = (level/2) + window
-            cts[i][slic][cts[i][slic]>vmax] = vmax
-            cts[i][slic][cts[i][slic]<vmin] = vmin
-            ct_2d = cts[i][slic]
+        print(patient)
+        skip = [ '2338', '2054', '2053' , '2212', '2318', '2066', '2451']
+        if patient not in skip:
 
-            masks[place_mask][slic][masks[place_mask][slic] != 0] = 1
-            masks[place_mask][slic][masks[place_mask][slic] == 0] = np.nan
-            mask_2d = masks[place_mask][slic]
-            id_2d = ct_ids[i]
-            ct_2d_arr.append(ct_2d)
-            mask_2d_arr.append(mask_2d)
-            id_2d_arr.append(id_2d)
-            slice_2d_arr.append(slic)
+            place_slice = slices_ids.index(patient)
+            place_mask = mask_ids.index(patient)
+            slices = slices_arr[place_slice]
+            masks[place_mask] = masks[place_mask].astype(float)
+            for slic in slices:
+                window = 80
+                level = 40
+                print("slice: ", slic)
+                vmin = (level/2) - window
+                vmax = (level/2) + window
+                cts[i][slic][cts[i][slic]>vmax] = vmax
+                cts[i][slic][cts[i][slic]<vmin] = vmin
+                ct_2d = cts[i][slic]
+
+                masks[place_mask][slic][masks[place_mask][slic] != 0] = 1
+                masks[place_mask][slic][masks[place_mask][slic] == 0] = np.nan
+                mask_2d = masks[place_mask][slic]
+                id_2d = ct_ids[i]
+                ct_2d_arr.append(ct_2d)
+                mask_2d_arr.append(mask_2d)
+                id_2d_arr.append(id_2d)
+                slice_2d_arr.append(slic)
 
     np.savez(path, cts = ct_2d_arr, masks = mask_2d_arr,  ids = id_2d_arr, slices = slice_2d_arr) 
+def Save2DCT(cts, ct_ids, slices_arr, slices_ids, path):
+    ct_2d_arr , id_2d_arr, slice_2d_arr = [], [] ,[], []
+    for i in range(len(ct_ids)):
+        patient = ct_ids[i]
+        print(patient)
+        skip = [ '2338', '2054', '2053' , '2212', '2318', '2066', '2451']
+        if patient not in skip:
+
+            place_slice = slices_ids.index(patient)
+            
+            slices = slices_arr[place_slice]
+           
+            for slic in slices:
+                window = 80
+                level = 40
+                print("slice: ", slic)
+                vmin = (level/2) - window
+                vmax = (level/2) + window
+                cts[i][slic][cts[i][slic]>vmax] = vmax
+                cts[i][slic][cts[i][slic]<vmin] = vmin
+                ct_2d = cts[i][slic]
+
+                
+                id_2d = ct_ids[i]
+                ct_2d_arr.append(ct_2d)
+                
+                id_2d_arr.append(id_2d)
+                slice_2d_arr.append(slic)
+
+    np.savez(path, cts = ct_2d_arr,  ids = id_2d_arr, slices = slice_2d_arr) 
 def Unpack2DNpz(path):
     
     data = np.load(path, allow_pickle=True)
