@@ -1,5 +1,5 @@
 import matplotlib
-from utils import Unpack2DNpz, UnpackNpz, UnpackSlices
+from utils import Unpack2DNpz, UnpackNpz, UnpackSlices, Unpack2DCT
 import nibabel as nib
 import numpy as np
 from nnunet.utilities.file_conversions import convert_2d_image_to_nifti
@@ -66,11 +66,13 @@ def main():
     cts3d, ids3d = UnpackNpz(path_3d)
     slices3d, slices_ids3d = UnpackSlices(slices_path)
     masks3d, mask_ids3d = UnpackNpz(mask_path)
-    path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/h_matched_2d_training.npz'
-    cts, masks, ids, slices = Unpack2DNpz(path)
+    path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/adrian_matched_2d_training.npz'
+    path_test = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CTstest2dskip.npz'
+    cts, ids, slices_t= Unpack2DCT(path_test)
+    #cts, masks, ids, slices = Unpack2DNpz(path)
     for i in range(0, len(cts)):
-        title = '/Users/oliviamurray/Documents/PhD/MISTIE/training_data/CTmatchedHNifti/' + str(ids[i]) + "h"
-        convert_2d_image_to_nifti(masks[i], title, is_seg=True)
+        title = '/Users/oliviamurray/Documents/PhD/MISTIE/training_data/CTmatchedTestSkipped/' + str(ids[i]) 
+        convert_2d_image_to_nifti(cts[i], title, is_seg=False)
 
     '''    
     test_ids, test_cts, test_masks, test_slices, test_slice_ids = [],[],[],[],[]

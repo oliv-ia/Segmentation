@@ -809,6 +809,15 @@ def Unpack2DNpz(path):
     slices = data['slices']
     return cts, masks, ids, slices
 
+def Unpack2DCT(path):
+    
+    data = np.load(path, allow_pickle=True)
+    cts = data['cts']
+    
+    ids = data['ids']
+    slices = data['slices']
+    return cts, ids, slices
+
 def GetInvolved(ids_a, ids_b,masks_a, masks_b ):
     # according to adrian
     a_info_path = "/Users/oliviamurray/Documents/PhD/MISTIE/PRIME_ICH_Data.xlsx"
