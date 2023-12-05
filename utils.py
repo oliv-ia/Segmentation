@@ -12,8 +12,10 @@ from scipy.ndimage import label
 def GetSlices(seg_arr):
     values= []
     for i in range(0,len(seg_arr)):
-        val = np.sum(seg_arr[i,:,:])
-        if val >= 50750:
+        #val = np.sum(seg_arr[i,:,:])
+        val = np.sum(seg_arr[i])
+        #if val >= 50750:
+        if val > 0:
             values.append(i)
     return values
 
@@ -108,7 +110,7 @@ def StapleGun4(masks_a, masks_b, masks_c, masks_d, ids_a, ids_b, ids_c, ids_d):
     slices_array_c = GetSlicesArray(masks_c)
     """
     #removed CR slices, for when I have all of the data sheets 
-    path_a = "/Users/olivia/Documents/PhD/MISTIE/mask_data/CRdata.xlsx"
+    path_a = "/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CRdata.xlsx"
  
     slices_array_a = NewRemoveCoronaRadiataSlices(masks_a, ids_a, path_a, sheetname='adrian')
     slices_array_b = NewRemoveCoronaRadiataSlices(masks_b, ids_b, path_a, sheetname = 'paul')
@@ -142,6 +144,7 @@ def StapleGun4(masks_a, masks_b, masks_c, masks_d, ids_a, ids_b, ids_c, ids_d):
 
                 staple_filter = sitk.STAPLEImageFilter()
                 staple_filter.SetForegroundValue(1)
+                staple_filter.SetMaximumIterations(99999)
                 staple_image = staple_filter.Execute(mask_d ,mask_b, mask_c, mask_a)
                 staple_image = staple_image > 0.5                                
                 staple_slice_array = sitk.GetArrayFromImage(staple_image)
@@ -231,9 +234,9 @@ def StapleGunPLIC(slices__a, slices__b, slices__c, slices__d, p_masks_a, p_masks
 
 def UnpackNpz(path):
     data = np.load(path, allow_pickle=True)
-    masks = data['masks']
+    image = data['masks']
     ids = data['ids']
-    return masks, ids
+    return image, ids
 def UnpackSlices(path):
     data = np.load(path, allow_pickle=True)
     slices = data['slices']
@@ -565,7 +568,7 @@ def GetSliceOverlap(masks_a, ids_a, masks_b, ids_b, masks_c, ids_c):
 
 def GetSliceOverlap4(masks_a, ids_a, masks_b, ids_b, masks_c, ids_c, masks_d, ids_d):
     percent = []
-    path = "/Users/olivia/Documents/PhD/MISTIE/mask_data/CRdata.xlsx"
+    path = "/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CRdata.xlsx"
     '''
     slices_a = GetSlicesArray(masks_a)
     slices_b = GetSlicesArray(masks_b)
@@ -578,6 +581,12 @@ def GetSliceOverlap4(masks_a, ids_a, masks_b, ids_b, masks_c, ids_c, masks_d, id
 
     total_intersection = 0
     total_union = 0
+    total_slices = 0
+    total_slices_a = 0
+    total_slices_p = 0
+    total_slices_s = 0
+    total_slices_h = 0
+    no_patients = 0
     for i in ids_a:
         ind_a = ids_a.tolist().index(i)
         ind_p = ids_b.tolist().index(i)
@@ -591,9 +600,15 @@ def GetSliceOverlap4(masks_a, ids_a, masks_b, ids_b, masks_c, ids_c, masks_d, id
         percent.append(percentage)
         total_intersection += len(intersection)
         total_union += len(union)
+        total_slices += len(slices_a[ind_a]) + len(slices_b[ind_p]) + len(slices_c[ind_s]) +len(slices_d[ind_h])
+        total_slices_a += len(slices_a[ind_a])
+        total_slices_p += len(slices_b[ind_p])
+        total_slices_s += len(slices_c[ind_s])
+        total_slices_h += len(slices_d[ind_h])
+        no_patients += 1
 
     total_percentage = total_intersection/total_union
-    return total_percentage, percent
+    return total_percentage, percent, total_slices, total_slices_a, total_slices_p, total_slices_s, total_slices_h, no_patients
 def SaveStapleData(inputs, ids, slices):
     path = '/Users/olivia/Documents/PhD/MISTIE/mask_data/staple_masks.npz'
     ids = np.array(ids)
@@ -743,11 +758,11 @@ def Save2DData(cts, ct_ids, masks, mask_ids, slices_arr, slices_ids, path):
     for i in range(len(ct_ids)):
         patient = ct_ids[i]
         print(patient)
-        skip = [ '2338', '2054', '2053' , '2212', '2318', '2066', '2451']
+        skip = []
         if patient not in skip:
 
-            place_slice = slices_ids.index(patient)
-            place_mask = mask_ids.index(patient)
+            place_slice = slices_ids.tolist().index(patient)
+            place_mask = mask_ids.tolist().index(patient)
             slices = slices_arr[place_slice]
             masks[place_mask] = masks[place_mask].astype(float)
             for slic in slices:
@@ -833,3 +848,49 @@ def GetInvolved(ids_a, ids_b,masks_a, masks_b ):
             print(ID[i][0:4])
             a_involve.append(involve[i])
     return a_involve
+
+def ReadNifti(filedir):
+    seg = sitk.ReadImage(filedir, imageIO= "NiftiImageIO")  
+    seg_arr = sitk.GetArrayFromImage(seg)
+    seg_arr = seg_arr.astype(np.int64)
+    return seg_arr
+
+def GetFiles(filedir):
+    entries = Path(filedir)
+    fname, id, pathlist = [],[],[]
+    
+ 
+    for entry in entries.iterdir():
+     
+     
+     if entry.name[0:4] != ".DS_":
+        fname.append(entry.name)
+        id.append(entry.name[0:4])
+        pathlist.append(str(filedir) + "/" + str(entry.name))
+    return np.array(fname), np.array(id), np.array(pathlist)
+
+def ReadNiftiFolder(path):
+    fname, ids, pathlist = GetFiles(path)
+
+
+ 
+
+
+    mask_array = []
+
+    for dir in pathlist:
+        mask = ReadNifti(dir)
+        mask_array.append(mask)
+        
+        print ("mask shape: ", mask.shape)
+        print(" Read for ", dir)
+
+    return mask_array, ids
+def SaveData(inputs, ids, path):
+   
+    ids = np.array(ids)
+    #print("final shape: ", inputs.shape,  ids.shape)
+    np.savez(path, image = inputs,  ids = ids) 
+    print("Saved data") 
+    
+    

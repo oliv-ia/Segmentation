@@ -1,12 +1,14 @@
+
 import matplotlib
-from utils import Unpack2DNpz, UnpackNpz, UnpackSlices, Unpack2DCT
+from utils import GetSlicesArray, Unpack2DNpz, UnpackNpz, UnpackSlices, Unpack2DCT, ReadNifti, GetFiles, ReadNiftiFolder, SaveData
 import nibabel as nib
 import numpy as np
 from nnunet.utilities.file_conversions import convert_2d_image_to_nifti
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 from utils import Save2DData
-
+import os
+from pathlib import Path
 # file to convert 2D arrays into pseudo-3D nifti images for use with nnunet 
 # must be 2D slices and not 3D arrays
 def convert_2d_image_to_nifti(img, output_filename_truncated: str, spacing=(999, 1, 1),
@@ -58,21 +60,73 @@ def convert_2d_image_to_nifti(img, output_filename_truncated: str, spacing=(999,
             sitk.WriteImage(itk_img, output_filename_truncated + "_%04.0d.nii.gz" % j)
         else:
             sitk.WriteImage(itk_img, output_filename_truncated + ".nii.gz")
+def ExtractPng(filedir):
+    
+    entries = Path(filedir)
+    fname, id, pathlist = [],[],[]
+    idTick = 0
+    images = []
+    ids = []
+    for entry in entries.iterdir():
+        print(entry)
+        segg = sitk.ReadImage(str(entry), imageIO= "PNGImageIO")
+        seg = sitk.GetArrayFromImage(segg)
+        print(seg.shape)
+        images.append(seg)
+        name =  entry.name[4:12]
+        ids.append([name])
+    return images, ids
 
 def main():
-    path_3d = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CTscans.npz'
-    slices_path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CR_slices_adrian.npz'
-    mask_path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/PLIC_mask_adrian.npz'
-    cts3d, ids3d = UnpackNpz(path_3d)
-    slices3d, slices_ids3d = UnpackSlices(slices_path)
-    masks3d, mask_ids3d = UnpackNpz(mask_path)
-    path = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/adrian_matched_2d_training.npz'
-    path_test = '/Users/oliviamurray/Documents/PhD/MISTIE/mask_data/CTstest2dskip.npz'
-    cts, ids, slices_t= Unpack2DCT(path_test)
-    #cts, masks, ids, slices = Unpack2DNpz(path)
-    for i in range(0, len(cts)):
-        title = '/Users/oliviamurray/Documents/PhD/MISTIE/training_data/CTmatchedTestSkipped/' + str(ids[i]) 
-        convert_2d_image_to_nifti(cts[i], title, is_seg=False)
+    # Reading dicoms to nifti, comment out
+    '''
+    mask_dicom_path = "/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/testing masks"
+    ct_dicom_path = "/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/testing scans"
+    haem_dicom_path = "/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /haematomas"
+    mask_array, mask_ids = ReadNiftiFolder(mask_dicom_path)
+    CT_array, CT_ids = ReadNiftiFolder(ct_dicom_path)
+    haematoma_array, haematoma_ids = ReadNiftiFolder(haem_dicom_path)
+    SaveData(mask_array, mask_ids,"/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/internal_capsule_masks.npz" )
+    SaveData(CT_array, CT_ids,"/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/ct_scans.npz" )
+    #SaveData(haematoma_array, haematoma_ids,"/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /haematoma_masks.npz" )
+    # end of section
+
+    # converting and saving 2D arrays
+    ic_array, ic_ids = UnpackNpz("/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/internal_capsule_masks.npz")
+
+    haem_array, haem_ids = UnpackNpz("/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /haematoma_masks.npz")
+    ct_array, ct_ids = UnpackNpz("/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/ct_scans.npz" )
+    # order arrays
+    ic_ordered =[]
+    for id in ct_ids:
+        idic = ic_ids.tolist().index(id)
+        ic_ordered.append(ic_array[idic])
+    ic_slices = GetSlicesArray(ic_ordered)
+    haem_slices = GetSlicesArray(haem_array)
+    Save2DData(ct_array, ct_ids, ic_ordered, ct_ids, ic_slices, ct_ids, path = "/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/ic_ct_2d.npz" )
+    # end of section
+
+   '''
+    img2, ids2 = ExtractPng('/Users/oliviamurray/Downloads/Fetoscopy Placenta Dataset/Vessel_segmentation_annotations/video02/images')
+    img3,ids3 = ExtractPng('/Users/oliviamurray/Downloads/Fetoscopy Placenta Dataset/Vessel_segmentation_annotations/video03/images')
+    img4,ids4 = ExtractPng('/Users/oliviamurray/Downloads/Fetoscopy Placenta Dataset/Vessel_segmentation_annotations/video04/images')
+    img5,ids5 = ExtractPng('/Users/oliviamurray/Downloads/Fetoscopy Placenta Dataset/Vessel_segmentation_annotations/video05/images')
+    img6,ids6 = ExtractPng('/Users/oliviamurray/Downloads/Fetoscopy Placenta Dataset/Vessel_segmentation_annotations/video06/images')
+    img = img2 +img3 +img4 +img5 +img6
+    id = ids2 + ids3 + ids4 + ids5 +ids6
+    img = np.array(img)
+    id = np.array(id)
+    # converting 2d to pseudo 3d nifti
+    #path_2d = "/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /further testing/ic_ct_2d.npz"
+    #cts, masks, ids, slices= Unpack2DNpz(path_2d)
+    
+    for i in range(0, len(img)):
+        title = "/Users/oliviamurray/Documents/PhD/MISTIE/MedICSS/FetRegNifti/Train" + str(id[i]) 
+        convert_2d_image_to_nifti(img[i], title, is_seg=False)
+    for i in range(0, len(id)):
+        title = "/Users/oliviamurray/Documents/PhD/MISTIE/MedICSS/FetRegNifti/Train" + str(id[i]) + "_mask"
+        convert_2d_image_to_nifti(id[i], title, is_seg=True)
+
 
     '''    
     test_ids, test_cts, test_masks, test_slices, test_slice_ids = [],[],[],[],[]
@@ -92,7 +146,7 @@ def main():
     #d = Save2DData(test_cts, test_ids,test_masks, test_ids, test_slices, test_ids, save_path )
     '''
     """
-    test_load = nib.load('/Users/oliviamurray/Documents/PhD/MISTIE/training_data/CTmatchedNifti/2027_0000.nii.gz').get_fdata()
+    test_load = nib.load("/Users/oliviamurray/Documents/PhD/MISTIE/my segmentations /training/2D masks/2027_0000.nii.gz").get_fdata()
     test_load_m = nib.load('/Users/oliviamurray/Documents/PhD/MISTIE/training_data/maskmatchedNifti/2027.nii.gz').get_fdata()
     print(test_load.shape)
     print(test_load_m.shape)
